@@ -149,9 +149,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     REFRESH_FREQUENCY_COUNT
   };
 
-  // Short power button press actions. Touch boards get PWR_CONFIRM in place of
-  // CREATE_CLIPPING; touch boards without a home key also get the reader
-  // shortcuts (see SettingsList.h). Persisted by index: append only.
+  // Short power button press actions. Button boards add CREATE_CLIPPING and
+  // PWR_BACK; touch boards without a home key add the reader shortcuts (see
+  // SettingsList.h). Persisted by index: append only.
   enum SHORT_PWRBTN {
     IGNORE = 0,
     SLEEP = 1,
@@ -166,8 +166,14 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     PWR_BACK = 10,
     SHORT_PWRBTN_COUNT
   };
-  // Persisted by value: append only.
-  enum SIDE_CHORD_ACTION { SIDE_CHORD_OFF = 0, SIDE_CHORD_CONFIRM = 1, SIDE_CHORD_BACK = 2, SIDE_CHORD_ACTION_COUNT };
+  // Button-board gesture actions. Persisted by value: append only.
+  enum BUTTON_SHORTCUT {
+    SHORTCUT_OFF = 0,
+    SHORTCUT_CONFIRM = 1,
+    SHORTCUT_BACK = 2,
+    SHORTCUT_CLIPPING = 3,
+    BUTTON_SHORTCUT_COUNT
+  };
 
   // Long-press Confirm action while reading an EPUB. Persisted values are stable;
   // SettingsList maps them to the device-specific option list shown to the user.
@@ -286,10 +292,10 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // power button for shortPwrBtn actions without the double-click wait.
   uint8_t doubleClickPwrLight = 1;
   // Button boards: action for both side buttons pressed together.
-  uint8_t sideChordAction = SIDE_CHORD_OFF;
-  // Button boards: double-click power starts a clipping in the EPUB reader. A
-  // single click then waits out the double-click window.
-  uint8_t doubleClickPwrClip = 0;
+  uint8_t sideChordAction = SHORTCUT_OFF;
+  // Button boards: action for a power double click. While set, a single click
+  // waits out the double-click window.
+  uint8_t doubleClickPwrAction = SHORTCUT_OFF;
   uint8_t homeButtonTapAction = static_cast<uint8_t>(HomeButtonAction::Home);
   uint8_t homeButtonDoubleTapAction = static_cast<uint8_t>(HomeButtonAction::ToggleFrontlight);
   uint8_t homeButtonLongPressAction = static_cast<uint8_t>(HomeButtonAction::ReaderMenu);

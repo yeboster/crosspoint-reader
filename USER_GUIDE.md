@@ -325,10 +325,11 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Links and Footnotes" - A short press in reading mode opens link selection. If the page has only one link, it opens directly. After following a link, a short press returns to the previous location.
   - "Refresh" - A short press triggers a manual full-screen refresh, useful for clearing ghosting
   - "Confirm" - A short press acts as the Confirm button everywhere
+  - "Create Clipping" (button-only devices) - A short press on the EPUB reading page starts clipping selection
   - "Back" (button-only devices) - A short press acts as the Back button everywhere
 - **Quick return from links**: Controls whether a short press of the power button acts as Back after following a link or footnote.
-- **Double-Click Power for Clipping** (button-only devices): On the EPUB reading page, double-click the power button to start clipping selection. There, a single short click waits about 0.4 seconds before its **Short Power Button Click** action runs. Menus, the end-of-book screen, and other screens are not affected. This setting has no effect when **Short Power Button Click** is "Sleep", because the device sleeps as soon as power is pressed.
-- **Both Side Buttons** (only shown on devices that support it, such as the X4 Classic): Choose what pressing both side buttons together does: "Off" (default), "Confirm", or "Back". Press both buttons within 0.1 seconds of each other. When this is not "Off", a side button waits up to 0.1 seconds for the other one before it acts alone.
+- **Double-Click Power** (button-only devices except Paper Mono): Choose what a double click of the power button does: "Off" (default), "Confirm", "Back", or "Create Clipping". "Confirm" and "Back" work on every screen. "Create Clipping" works only on the EPUB reading page; menus, the end-of-book screen, and other screens are not affected. Wherever a double click works, a single short click waits about 0.4 seconds before its **Short Power Button Click** action runs, or runs at once if you press another button first. This setting has no effect when **Short Power Button Click** is "Sleep", because the device sleeps as soon as power is pressed.
+- **Both Side Buttons** (only shown on devices that support it, such as the X4 Classic): Choose what pressing both side buttons together does: "Off" (default), "Confirm", "Back", or "Create Clipping" (EPUB reading page only). Press both buttons within 0.1 seconds of each other. When this is not "Off", a side button waits up to 0.1 seconds for the other one before it acts alone.
 
 #### 3.6.4 System
 

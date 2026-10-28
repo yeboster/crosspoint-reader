@@ -31,6 +31,15 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     return values;
   }();
 
+  static constexpr auto BUTTON_SHORTCUT_VALUES = [] {
+    std::array<StrId, CrossPointSettings::BUTTON_SHORTCUT_COUNT> values{};
+    values[CrossPointSettings::SHORTCUT_OFF] = StrId::STR_STATE_OFF;
+    values[CrossPointSettings::SHORTCUT_CONFIRM] = StrId::STR_CONFIRM;
+    values[CrossPointSettings::SHORTCUT_BACK] = StrId::STR_PWR_BACK;
+    values[CrossPointSettings::SHORTCUT_CLIPPING] = StrId::STR_SAVE_CLIPPING;
+    return values;
+  }();
+
   const auto emit = [visit, context](auto&& info) { visit(context, info); };
   // --- Display ---
   emit(SettingInfo::StaticEnum(StrId::STR_SLEEP_SCREEN, &CrossPointSettings::sleepScreen, SLEEP_SCREEN_VALUES,
@@ -181,14 +190,14 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     emit(SettingInfo::Toggle(StrId::STR_DBL_CLICK_PWR_LIGHT, &CrossPointSettings::doubleClickPwrLight,
                              "doubleClickPwrLight", StrId::STR_CAT_CONTROLS));
   emit(buildShortPowerButtonSetting());
-  if (!BoardConfig::hasTouch()) {
-    emit(SettingInfo::Toggle(StrId::STR_DBL_CLICK_PWR_CLIP, &CrossPointSettings::doubleClickPwrClip,
-                             "doubleClickPwrClip", StrId::STR_CAT_CONTROLS));
+  // Paper Mono sleeps on the power release, so a held-back click would delay it.
+  if (!BoardConfig::hasTouch() && !BoardConfig::isPaperMono()) {
+    emit(SettingInfo::StaticEnum(StrId::STR_DBL_CLICK_PWR_ACTION, &CrossPointSettings::doubleClickPwrAction,
+                                 BUTTON_SHORTCUT_VALUES, "doubleClickPwrAction", StrId::STR_CAT_CONTROLS));
   }
   if (MappedInputManager::supportsSideChord()) {
-    emit(SettingInfo::Enum(StrId::STR_SIDE_CHORD_ACTION, &CrossPointSettings::sideChordAction,
-                           {StrId::STR_STATE_OFF, StrId::STR_CONFIRM, StrId::STR_PWR_BACK}, "sideChordAction",
-                           StrId::STR_CAT_CONTROLS));
+    emit(SettingInfo::StaticEnum(StrId::STR_SIDE_CHORD_ACTION, &CrossPointSettings::sideChordAction,
+                                 BUTTON_SHORTCUT_VALUES, "sideChordAction", StrId::STR_CAT_CONTROLS));
   }
   // Always persisted; getSettingsList() hides it when the IMU probe fails.
   emit(SettingInfo::Enum(StrId::STR_TILT_PAGE_TURN, &CrossPointSettings::tiltPageTurn,

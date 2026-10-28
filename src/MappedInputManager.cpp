@@ -25,8 +25,9 @@ bool MappedInputManager::supportsSideChord() {
 void MappedInputManager::update(const bool deferHomeButtonAction) const {
   remoteInput.reset();
   gpio.update();
+  frameShortcut = CrossPointSettings::SHORTCUT_OFF;
   updateSideChord();
-  const bool powerDoubleClick = updatePowerDoubleClick();
+  if (updatePowerDoubleClick()) frameShortcut = SETTINGS.doubleClickPwrAction;
   const bool pagePressed =
       SETTINGS.vibration == CrossPointSettings::VIBRATION_TOUCH_PAGE && gpio.wasCapacitivePagePressed();
   HalHaptics::feedback(SETTINGS.vibration != CrossPointSettings::VIBRATION_OFF, pagePressed, SETTINGS.hapticIntensity);
@@ -60,7 +61,7 @@ void MappedInputManager::update(const bool deferHomeButtonAction) const {
         break;
     }
   }
-  if (powerDoubleClick) homeAction = HomeButtonAction::CreateClipping;
+  if (frameShortcut == CrossPointSettings::SHORTCUT_CLIPPING) homeAction = HomeButtonAction::CreateClipping;
   if (deferHomeButtonAction) {
     // Keep the first action observed during a synchronous transfer. Home must
     // still be visible now so the transfer can cancel and unwind promptly.
@@ -85,7 +86,6 @@ constexpr unsigned long POWER_DOUBLE_CLICK_MS = 400;
 
 void MappedInputManager::updateSideChord() const {
   sideReplayPress = false;
-  sideChordFrame = false;
   const bool upHeld = gpio.isPressed(HalGPIO::BTN_UP);
   const bool downHeld = gpio.isPressed(HalGPIO::BTN_DOWN);
   if (sideChord == SideChord::Held) {
@@ -111,7 +111,7 @@ void MappedInputManager::updateSideChord() const {
 
   // Idle. The setting only gates new chords, so turning it off mid-chord
   // still hides the keys until they are released.
-  if (SETTINGS.sideChordAction == CrossPointSettings::SIDE_CHORD_OFF || !supportsSideChord()) return;
+  if (SETTINGS.sideChordAction == CrossPointSettings::SHORTCUT_OFF || !supportsSideChord()) return;
   const bool upPressed = gpio.wasPressed(HalGPIO::BTN_UP);
   const bool downPressed = gpio.wasPressed(HalGPIO::BTN_DOWN);
   if (upPressed && downPressed && upHeld && downHeld) {
@@ -129,17 +129,19 @@ void MappedInputManager::updateSideChord() const {
 
 void MappedInputManager::startSideChord() const {
   sideChord = SideChord::Held;
-  sideChordFrame = true;
-  sideChordButton = SETTINGS.sideChordAction == CrossPointSettings::SIDE_CHORD_BACK ? Button::Back : Button::Confirm;
+  frameShortcut = SETTINGS.sideChordAction;
 }
 
 bool MappedInputManager::updatePowerDoubleClick() const {
   powerReleaseHidden = false;
   powerReplayRelease = false;
-  const bool armed = powerDoubleClickArmed;
+  // Clipping exists only on the EPUB page, so only the reader arms it.
+  const uint8_t action = SETTINGS.doubleClickPwrAction;
+  const bool armed = action == CrossPointSettings::SHORTCUT_CLIPPING ? powerDoubleClickArmed
+                                                                     : action != CrossPointSettings::SHORTCUT_OFF;
   powerDoubleClickArmed = false;
-  if (!armed || !SETTINGS.doubleClickPwrClip || gpio.hasTouch()) {
-    // Never replay a held-back click outside the activity that armed it.
+  if (!armed || gpio.hasTouch()) {
+    // Off, or Clipping away from the reader page: drop any held-back click.
     powerClickAt = 0;
     return false;
   }
@@ -154,8 +156,11 @@ bool MappedInputManager::updatePowerDoubleClick() const {
       powerReleaseHidden = true;
       return true;
     }
-    // Replay the first click once the window ends, but not during a new press.
-    if (released || (now - powerClickAt > POWER_DOUBLE_CLICK_MS && !gpio.isPressed(HalGPIO::BTN_POWER))) {
+    // Replay the first click once the window ends (but not during a new
+    // press), or as soon as another key is pressed so it keeps its order.
+    const bool otherKeyPressed = gpio.wasAnyPressed() && !gpio.wasPressed(HalGPIO::BTN_POWER);
+    if (released || otherKeyPressed ||
+        (now - powerClickAt > POWER_DOUBLE_CLICK_MS && !gpio.isPressed(HalGPIO::BTN_POWER))) {
       powerClickAt = 0;
       powerReplayRelease = true;
     }
@@ -519,7 +524,8 @@ bool MappedInputManager::wasPressed(const Button button) const {
   if ((button == Button::NavPrevious || button == Button::Left) && remoteInput.button == RemoteButton::Previous)
     return true;
   if (button == Button::Confirm && homeAction == HomeButtonAction::Confirm) return true;
-  if (sideChordFrame && button == sideChordButton) return true;
+  if (button == Button::Confirm && frameShortcut == CrossPointSettings::SHORTCUT_CONFIRM) return true;
+  if (button == Button::Back && frameShortcut == CrossPointSettings::SHORTCUT_BACK) return true;
   if (button == Button::Confirm && wasPowerClickAction(CrossPointSettings::PWR_CONFIRM)) return true;
   if (button == Button::Back && (wasBackGesture() || wasPowerClickAction(CrossPointSettings::PWR_BACK))) return true;
 #if FREEINK_CAP_TOUCH
@@ -535,7 +541,8 @@ bool MappedInputManager::wasReleased(const Button button) const {
   if ((button == Button::NavPrevious || button == Button::Left) && remoteInput.button == RemoteButton::Previous)
     return true;
   if (button == Button::Confirm && homeAction == HomeButtonAction::Confirm) return true;
-  if (sideChordFrame && button == sideChordButton) return true;
+  if (button == Button::Confirm && frameShortcut == CrossPointSettings::SHORTCUT_CONFIRM) return true;
+  if (button == Button::Back && frameShortcut == CrossPointSettings::SHORTCUT_BACK) return true;
   if (button == Button::Confirm && wasPowerClickAction(CrossPointSettings::PWR_CONFIRM)) return true;
   if (button == Button::Back && (wasBackGesture() || wasPowerClickAction(CrossPointSettings::PWR_BACK))) return true;
 #if FREEINK_CAP_TOUCH
@@ -576,7 +583,9 @@ bool MappedInputManager::isPressed(const Button button) const { return mapButton
 
 unsigned long MappedInputManager::getHeldTime() const {
   // A mapped action has its own meaning, independent of the contact duration.
-  if (hasRemoteClick() || homeAction != HomeButtonAction::Ignore || sideChordFrame || powerReplayRelease) return 0;
+  if (hasRemoteClick() || homeAction != HomeButtonAction::Ignore || frameShortcut != CrossPointSettings::SHORTCUT_OFF ||
+      powerReplayRelease)
+    return 0;
   if (!gpio.wasAnyPressed() && !gpio.wasAnyReleased() && touchHeldOverrideValid &&
       millis() - touchHeldOverrideAt <= TOUCH_HELD_OVERRIDE_WINDOW_MS) {
     return touchHeldOverrideMs;

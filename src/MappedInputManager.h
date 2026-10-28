@@ -53,8 +53,9 @@ class MappedInputManager {
 #endif
   // Both side keys can be read at once (separate digital pins, no touch).
   static bool supportsSideChord();
-  // The EPUB reader arms the power double click for the next frame. Unarmed
-  // frames pass power clicks through and drop a held-back one.
+  // The EPUB reader arms a Clipping power double click for the next frame;
+  // Confirm and Back are always armed. Unarmed frames pass power clicks
+  // through and drop a held-back one.
   void armPowerDoubleClick() const { powerDoubleClickArmed = true; }
   // Drops a held-back power click whose release the main loop consumed.
   void cancelPowerClick() const { powerClickAt = 0; }
@@ -182,8 +183,8 @@ class MappedInputManager {
   mutable uint8_t sidePendingButton = 0;
   mutable unsigned long sidePendingAt = 0;
   mutable bool sideReplayPress = false;
-  mutable bool sideChordFrame = false;
-  mutable Button sideChordButton = Button::Confirm;
+  // BUTTON_SHORTCUT fired by a side chord or power double click this frame.
+  mutable uint8_t frameShortcut = 0;
   // A first short power click is held back until the double-click window ends.
   mutable unsigned long powerClickAt = 0;
   mutable bool powerReleaseHidden = false;
