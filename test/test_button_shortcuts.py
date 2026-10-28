@@ -60,8 +60,8 @@ struct CrossPointSettings {
   enum { VIBRATION_OFF, VIBRATION_TOUCH_PAGE };
   enum SHORT_PWRBTN { IGNORE = 0, PWR_CONFIRM = 5, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9, PWR_BACK = 10 };
   int shortPwrBtn = IGNORE;
-  enum SIDE_CHORD_ACTION { SIDE_CHORD_OFF, SIDE_CHORD_CONFIRM, SIDE_CHORD_BACK };
-  int sideChordAction = SIDE_CHORD_OFF, doubleClickPwrClip = 0;
+  enum BUTTON_SHORTCUT { SHORTCUT_OFF, SHORTCUT_CONFIRM, SHORTCUT_BACK, SHORTCUT_CLIPPING };
+  int sideChordAction = SHORTCUT_OFF, doubleClickPwrAction = SHORTCUT_OFF;
   int vibration = VIBRATION_OFF, hapticIntensity = 0;
   int homeButtonTapAction = 0, homeButtonDoubleTapAction = 0, homeButtonLongPressAction = 0;
   unsigned long getPowerButtonDuration() const { return 400; }
@@ -104,7 +104,7 @@ void sideChord() {
   frame(10);
   assert(input.wasReleased(Button::Up));
 
-  SETTINGS.sideChordAction = CrossPointSettings::SIDE_CHORD_CONFIRM;
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_CONFIRM;
   // A lone press is held back until the window ends, then replayed once.
   gpio.next[HalGPIO::BTN_UP] = true;
   frame(10);
@@ -170,7 +170,7 @@ void sideChord() {
   gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = true;
   frame(10);
   assert(clicked(Button::Confirm));
-  SETTINGS.sideChordAction = CrossPointSettings::SIDE_CHORD_OFF;
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_OFF;
   frame(600);
   assert(!input.isPressed(Button::Up) && !input.isPressed(Button::Down));
   gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = false;
@@ -179,7 +179,7 @@ void sideChord() {
   frame(10);
 
   // Boards that cannot read both side keys never hold a press back.
-  SETTINGS.sideChordAction = CrossPointSettings::SIDE_CHORD_CONFIRM;
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_CONFIRM;
   sideChordBoard = false;
   gpio.next[HalGPIO::BTN_UP] = true;
   frame(10);
@@ -189,7 +189,7 @@ void sideChord() {
   sideChordBoard = true;
 
   // The chord can act as Back instead.
-  SETTINGS.sideChordAction = CrossPointSettings::SIDE_CHORD_BACK;
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_BACK;
   gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = true;
   frame(10);
   assert(clicked(Button::Back) && quiet(Button::Confirm) && input.getHeldTime() == 0);
@@ -197,7 +197,17 @@ void sideChord() {
   frame(10);
   assert(quiet(Button::Back) && quiet(Button::Up) && quiet(Button::Down));
   frame(10);
-  SETTINGS.sideChordAction = CrossPointSettings::SIDE_CHORD_OFF;
+
+  // Or start a clipping, with neither button reported.
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_CLIPPING;
+  gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = true;
+  frame(10);
+  assert(clipping() && quiet(Button::Confirm) && quiet(Button::Back) && quiet(Button::Up));
+  gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = false;
+  frame(10);
+  assert(!clipping() && quiet(Button::Down));
+  frame(10);
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_OFF;
 }
 
 void powerClick(unsigned long heldMs) {
@@ -223,7 +233,7 @@ void powerShortcuts() {
   assert(clicked(Button::Confirm) && quiet(Button::Back));
   SETTINGS.shortPwrBtn = CrossPointSettings::PWR_BACK;
 
-  SETTINGS.doubleClickPwrClip = 1;
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_CLIPPING;
   // Outside the EPUB reader a click is never held back.
   powerClick(100);
   assert(clicked(Button::Back) && !clipping());
@@ -288,6 +298,51 @@ void powerShortcuts() {
   frame(10);
   powerClick(350);
   assert(input.wasReleased(Button::Power) && !clipping());
+
+  // Click for Confirm, double click for Back: works on every screen.
+  readerArmed = false;
+  SETTINGS.shortPwrBtn = CrossPointSettings::PWR_CONFIRM;
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_BACK;
+  frame(10);
+  powerClick(100);
+  assert(quiet(Button::Confirm) && quiet(Button::Back));
+  frame(450);
+  assert(clicked(Button::Confirm) && quiet(Button::Back));
+  frame(10);
+  powerClick(100);
+  powerClick(100);
+  assert(clicked(Button::Back) && quiet(Button::Confirm) && !clipping() && input.getHeldTime() == 0);
+  frame(500);
+  assert(quiet(Button::Back) && quiet(Button::Confirm));
+  // Another key pressed during the wait releases the click first.
+  powerClick(100);
+  gpio.next[HalGPIO::BTN_DOWN] = true;
+  frame(50);
+  assert(clicked(Button::Confirm) && input.wasPressed(Button::Down));
+  gpio.next[HalGPIO::BTN_DOWN] = false;
+  frame(10);
+  frame(500);
+  assert(quiet(Button::Confirm) && quiet(Button::Back));
+  // With the side chord on, the side press is held back, so Confirm leads.
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_CLIPPING;
+  powerClick(100);
+  gpio.next[HalGPIO::BTN_DOWN] = true;
+  frame(50);
+  assert(clicked(Button::Confirm) && !input.wasPressed(Button::Down));
+  frame(100);
+  assert(input.wasPressed(Button::Down) && quiet(Button::Confirm));
+  gpio.next[HalGPIO::BTN_DOWN] = false;
+  frame(10);
+  frame(500);
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_OFF;
+  // The swapped mapping.
+  SETTINGS.shortPwrBtn = CrossPointSettings::PWR_BACK;
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_CONFIRM;
+  powerClick(100);
+  powerClick(100);
+  assert(clicked(Button::Confirm) && quiet(Button::Back));
+  frame(500);
+  assert(quiet(Button::Back) && quiet(Button::Confirm));
 }
 
 int main() {
