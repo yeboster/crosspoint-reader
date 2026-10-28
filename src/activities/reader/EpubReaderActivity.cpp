@@ -724,6 +724,9 @@ void EpubReaderActivity::loop() {
     requestUpdate();
   }
 
+  // A power double click creates a clipping on the page view only.
+  if (overlay == Overlay::None && !endOfBookMenuActive()) mappedInput.armPowerDoubleClick();
+
   // The toolbar reader menu owns all input while shown, ahead of the automatic page turn
   // below: the More panel's rate popup switches automatic turning on and leaves the panel
   // open, so the timer must neither flip the page under it nor eat the panel's next

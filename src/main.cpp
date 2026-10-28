@@ -926,6 +926,7 @@ void loop() {
   // a page turn, refresh, or other short power-button action.
   if (wakePowerReleasePending && !gpio.isPressed(HalGPIO::BTN_POWER)) {
     wakePowerReleasePending = false;
+    mappedInputManager.cancelPowerClick();
     return;
   }
 
@@ -947,6 +948,7 @@ void loop() {
     if (gpio.wasReleased(HalGPIO::BTN_POWER)) {
       screenshotButtonsReleased = true;
       screenshotComboActive = false;
+      mappedInputManager.cancelPowerClick();
       return;
     }
     screenshotButtonsReleased = true;

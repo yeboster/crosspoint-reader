@@ -51,6 +51,13 @@ class MappedInputManager {
   // expires. The main loop supplies that one-frame event here.
   void setPowerConfirmClickFrame(const bool clicked) { powerConfirmClickFrame = clicked; }
 #endif
+  // Both side keys can be read at once (separate digital pins, no touch).
+  static bool supportsSideChord();
+  // The EPUB reader arms the power double click for the next frame. Unarmed
+  // frames pass power clicks through and drop a held-back one.
+  void armPowerDoubleClick() const { powerDoubleClickArmed = true; }
+  // Drops a held-back power click whose release the main loop consumed.
+  void cancelPowerClick() const { powerClickAt = 0; }
   bool injectRemoteClick(RemoteButton button);
   bool hasRemoteClick() const { return remoteInput.button != RemoteButton::None; }
   bool wasPressed(Button button) const;
@@ -138,6 +145,14 @@ class MappedInputManager {
   Button mapScreenDirection(Button button) const;
   Labels mapFrontLabels(const char* back, const char* confirm, const char* left, const char* right) const;
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
+  // Physical read with the side-chord and power double-click filters applied.
+  bool readButton(uint8_t index, bool (HalGPIO::*fn)(uint8_t) const) const;
+  void updateSideChord() const;
+  // Returns true on the frame of a power double click.
+  bool updatePowerDoubleClick() const;
+  void startSideChord() const;
+  // Short power click mapped to a button by shortPwrBtn (button boards).
+  bool wasPowerClickAction(uint8_t action) const;
   // SDK edge classification (fui::edgeSwipe) + the shared decode/held-time
   // bookkeeping; the wrappers below give each edge its board meaning.
   bool wasEdgeSwipe(freeink::ui::ScreenEdge edge) const;
@@ -160,6 +175,20 @@ class MappedInputManager {
   mutable unsigned long touchHeldOverrideAt = 0;
   mutable uint16_t longPressFiredButtons = 0;
   mutable uint16_t suppressedReleaseButtons = 0;
+  // Pending: a side press is held back while waiting for the other key.
+  // Held: the chord fired; both keys stay hidden until released.
+  enum class SideChord : uint8_t { Idle, Pending, Held };
+  mutable SideChord sideChord = SideChord::Idle;
+  mutable uint8_t sidePendingButton = 0;
+  mutable unsigned long sidePendingAt = 0;
+  mutable bool sideReplayPress = false;
+  mutable bool sideChordFrame = false;
+  mutable Button sideChordButton = Button::Confirm;
+  // A first short power click is held back until the double-click window ends.
+  mutable unsigned long powerClickAt = 0;
+  mutable bool powerReleaseHidden = false;
+  mutable bool powerReplayRelease = false;
+  mutable bool powerDoubleClickArmed = false;
 #if FREEINK_CAP_TOUCH
   bool powerConfirmClickFrame = false;
 #endif

@@ -163,8 +163,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     PWR_BOOKMARK = 7,
     PWR_SYNC = 8,
     PWR_READER_MENU = 9,
+    PWR_BACK = 10,
     SHORT_PWRBTN_COUNT
   };
+  // Persisted by value: append only.
+  enum SIDE_CHORD_ACTION { SIDE_CHORD_OFF = 0, SIDE_CHORD_CONFIRM = 1, SIDE_CHORD_BACK = 2, SIDE_CHORD_ACTION_COUNT };
 
   // Long-press Confirm action while reading an EPUB. Persisted values are stable;
   // SettingsList maps them to the device-specific option list shown to the user.
@@ -282,6 +285,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // X4 Pro: double-click power toggles the frontlight. Disabling frees the
   // power button for shortPwrBtn actions without the double-click wait.
   uint8_t doubleClickPwrLight = 1;
+  // Button boards: action for both side buttons pressed together.
+  uint8_t sideChordAction = SIDE_CHORD_OFF;
+  // Button boards: double-click power starts a clipping in the EPUB reader. A
+  // single click then waits out the double-click window.
+  uint8_t doubleClickPwrClip = 0;
   uint8_t homeButtonTapAction = static_cast<uint8_t>(HomeButtonAction::Home);
   uint8_t homeButtonDoubleTapAction = static_cast<uint8_t>(HomeButtonAction::ToggleFrontlight);
   uint8_t homeButtonLongPressAction = static_cast<uint8_t>(HomeButtonAction::ReaderMenu);

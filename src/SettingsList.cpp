@@ -3,6 +3,8 @@
 #include <array>
 #include <utility>
 
+#include "MappedInputManager.h"
+
 void forEachBaseSetting(SettingVisitor visit, void* context) {
   // Load and save walk this list, so every condition here must be fixed before
   // settings load. Runtime probes belong in getSettingsList().
@@ -179,6 +181,15 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     emit(SettingInfo::Toggle(StrId::STR_DBL_CLICK_PWR_LIGHT, &CrossPointSettings::doubleClickPwrLight,
                              "doubleClickPwrLight", StrId::STR_CAT_CONTROLS));
   emit(buildShortPowerButtonSetting());
+  if (!BoardConfig::hasTouch()) {
+    emit(SettingInfo::Toggle(StrId::STR_DBL_CLICK_PWR_CLIP, &CrossPointSettings::doubleClickPwrClip,
+                             "doubleClickPwrClip", StrId::STR_CAT_CONTROLS));
+  }
+  if (MappedInputManager::supportsSideChord()) {
+    emit(SettingInfo::Enum(StrId::STR_SIDE_CHORD_ACTION, &CrossPointSettings::sideChordAction,
+                           {StrId::STR_STATE_OFF, StrId::STR_CONFIRM, StrId::STR_PWR_BACK}, "sideChordAction",
+                           StrId::STR_CAT_CONTROLS));
+  }
   // Always persisted; getSettingsList() hides it when the IMU probe fails.
   emit(SettingInfo::Enum(StrId::STR_TILT_PAGE_TURN, &CrossPointSettings::tiltPageTurn,
                          {StrId::STR_STATE_OFF, StrId::STR_NORMAL, StrId::STR_INVERTED}, "tiltPageTurn",

@@ -21,6 +21,7 @@ stub = r"""
 struct HalGPIO {
   bool pressed = false, released = false, held = false;
   uint8_t button = 0;
+  static constexpr uint8_t BTN_UP = 4, BTN_DOWN = 5, BTN_POWER = 6;
   void update() {}
   bool wasAnyPressed() const { return pressed; }
   bool wasAnyReleased() const { return released; }
@@ -28,6 +29,8 @@ struct HalGPIO {
   bool wasReleased(uint8_t b) const { return b == button && released; }
   bool isPressed(uint8_t b) const { return b == button && held; }
   unsigned long getHeldTime() const { return 900; }
+  unsigned long getPowerButtonHeldTime() const { return 100; }
+  bool hasTouch() const { return false; }
   bool wasCapacitivePagePressed() const { return false; }
   bool hasHomeKey() const { return false; }
   bool wasHomeKeyTapped() const { return false; }
@@ -43,8 +46,11 @@ unsigned long millis() { return 1000; }
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
 struct CrossPointSettings {
   enum { VIBRATION_OFF, VIBRATION_TOUCH_PAGE };
-  enum { IGNORE = 0, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9 };
+  enum SHORT_PWRBTN { IGNORE = 0, PWR_CONFIRM = 5, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9, PWR_BACK = 10 };
   int shortPwrBtn = IGNORE;
+  enum SIDE_CHORD_ACTION { SIDE_CHORD_OFF, SIDE_CHORD_CONFIRM, SIDE_CHORD_BACK };
+  int sideChordAction = SIDE_CHORD_OFF, doubleClickPwrClip = 0;
+  unsigned long getPowerButtonDuration() const { return 400; }
   int vibration = VIBRATION_OFF, hapticIntensity = 0;
   int homeButtonTapAction = 0, homeButtonDoubleTapAction = 0, homeButtonLongPressAction = 0;
 } SETTINGS;
@@ -55,6 +61,7 @@ struct HalHaptics {
 bool MappedInputManager::mapButton(Button b, bool (HalGPIO::*fn)(uint8_t) const) const {
   return (gpio.*fn)(static_cast<uint8_t>(b));
 }
+bool MappedInputManager::supportsSideChord() { return false; }
 bool MappedInputManager::wasBackGesture() const { return false; }
 MappedInputManager::SwipeDir MappedInputManager::wasSwipe(int*, int*) const { return SwipeDir::None; }
 """ + "\n".join(methods) + r"""

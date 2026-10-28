@@ -227,10 +227,10 @@ inline std::vector<ShortPowerButtonOption> shortPowerButtonOptions() {
                                                  {StrId::STR_FORCE_REFRESH, CrossPointSettings::FORCE_REFRESH},
                                                  {StrId::STR_FOOTNOTES, CrossPointSettings::FOOTNOTES}};
   options.reserve(CrossPointSettings::SHORT_PWRBTN_COUNT);
-  if (BoardConfig::hasTouch()) {
-    options.push_back({StrId::STR_CONFIRM, CrossPointSettings::PWR_CONFIRM});
-  } else {
+  options.push_back({StrId::STR_CONFIRM, CrossPointSettings::PWR_CONFIRM});
+  if (!BoardConfig::hasTouch()) {
     options.push_back({StrId::STR_SAVE_CLIPPING, CrossPointSettings::CREATE_CLIPPING});
+    options.push_back({StrId::STR_PWR_BACK, CrossPointSettings::PWR_BACK});
   }
   // Touch boards without a home key have no button for these shortcuts.
   if (BoardConfig::hasTouch() && !BoardConfig::hasHomeKey()) {
