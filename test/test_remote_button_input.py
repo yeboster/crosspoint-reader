@@ -48,8 +48,11 @@ struct CrossPointSettings {
   enum { VIBRATION_OFF, VIBRATION_TOUCH_PAGE };
   enum SHORT_PWRBTN { IGNORE = 0, PWR_CONFIRM = 5, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9, PWR_BACK = 10 };
   int shortPwrBtn = IGNORE;
-  enum BUTTON_SHORTCUT { SHORTCUT_OFF, SHORTCUT_CONFIRM, SHORTCUT_BACK, SHORTCUT_CLIPPING };
-  int sideChordAction = SHORTCUT_OFF, doubleClickPwrAction = SHORTCUT_OFF;
+  enum BUTTON_SHORTCUT {
+    SHORTCUT_OFF, SHORTCUT_CONFIRM, SHORTCUT_BACK, SHORTCUT_CLIPPING, SHORTCUT_NIGHT_MODE,
+    SHORTCUT_REFRESH, SHORTCUT_BOOKMARK, SHORTCUT_READER_MENU, SHORTCUT_DICTIONARY
+  };
+  int sideChordAction = SHORTCUT_OFF, sideHoldAction = SHORTCUT_OFF, doubleClickPwrAction = SHORTCUT_OFF;
   unsigned long getPowerButtonDuration() const { return 400; }
   int vibration = VIBRATION_OFF, hapticIntensity = 0;
   int homeButtonTapAction = 0, homeButtonDoubleTapAction = 0, homeButtonLongPressAction = 0;
