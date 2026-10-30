@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <ctime>
 
+#include "ClippingStore.h"
+
 namespace {
 constexpr const char* WEEKDAY_NAMES[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 constexpr const char* MONTH_NAMES[] = {"January", "February", "March",     "April",   "May",      "June",
@@ -52,8 +54,7 @@ bool ClippingsManager::saveClipping(const std::string& bookTitle, const std::str
   }
   location += "\n";
 
-  static constexpr size_t MAX_TEXT_BYTES = 2000;
-  const size_t rawTextLen = std::min(selectedText.size(), MAX_TEXT_BYTES);
+  const size_t rawTextLen = std::min(selectedText.size(), CLIPPING_EXPORT_MAX);
   const size_t textLen = static_cast<size_t>(utf8SafeTruncateBuffer(selectedText.data(), rawTextLen));
   static constexpr char separator[] = "\n==========\n";
 
