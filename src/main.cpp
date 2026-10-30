@@ -1043,6 +1043,17 @@ void loop() {
   if (mappedInputManager.homeButtonAction() == HomeButtonAction::ToggleFrontlight) {
     toggleFrontlight();
   }
+  if (mappedInputManager.wasNightModeShortcut()) {
+    {
+      // Keep a render in progress from taking the promotion on the old polarity.
+      RenderLock lock;
+      SETTINGS.screenInverted = SETTINGS.screenInverted ? 0 : 1;
+      // Inversion rewrites every pixel; a clean waveform leaves no ghost.
+      renderer.promoteNextRefresh(HalDisplay::FULL_REFRESH);
+    }
+    SETTINGS.saveToFile();
+    activityManager.requestUpdate();
+  }
   if (mappedInputManager.homeButtonAction() == HomeButtonAction::Refresh ||
       (SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::FORCE_REFRESH &&
        mappedInputManager.wasReleased(MappedInputManager::Button::Power))) {

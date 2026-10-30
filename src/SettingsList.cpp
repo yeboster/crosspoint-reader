@@ -37,6 +37,11 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     values[CrossPointSettings::SHORTCUT_CONFIRM] = StrId::STR_CONFIRM;
     values[CrossPointSettings::SHORTCUT_BACK] = StrId::STR_PWR_BACK;
     values[CrossPointSettings::SHORTCUT_CLIPPING] = StrId::STR_SAVE_CLIPPING;
+    values[CrossPointSettings::SHORTCUT_NIGHT_MODE] = StrId::STR_NIGHT_MODE;
+    values[CrossPointSettings::SHORTCUT_REFRESH] = StrId::STR_FORCE_REFRESH;
+    values[CrossPointSettings::SHORTCUT_BOOKMARK] = StrId::STR_BOOKMARK_OPTION;
+    values[CrossPointSettings::SHORTCUT_READER_MENU] = StrId::STR_READER_MENU;
+    values[CrossPointSettings::SHORTCUT_DICTIONARY] = StrId::STR_DICTIONARY;
     return values;
   }();
 
@@ -198,6 +203,8 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
   if (MappedInputManager::supportsSideChord()) {
     emit(SettingInfo::StaticEnum(StrId::STR_SIDE_CHORD_ACTION, &CrossPointSettings::sideChordAction,
                                  BUTTON_SHORTCUT_VALUES, "sideChordAction", StrId::STR_CAT_CONTROLS));
+    emit(SettingInfo::StaticEnum(StrId::STR_SIDE_HOLD_ACTION, &CrossPointSettings::sideHoldAction,
+                                 BUTTON_SHORTCUT_VALUES, "sideHoldAction", StrId::STR_CAT_CONTROLS));
   }
   // Always persisted; getSettingsList() hides it when the IMU probe fails.
   emit(SettingInfo::Enum(StrId::STR_TILT_PAGE_TURN, &CrossPointSettings::tiltPageTurn,

@@ -724,7 +724,7 @@ void EpubReaderActivity::loop() {
     requestUpdate();
   }
 
-  // A power double click creates a clipping on the page view only.
+  // A power double click runs reader actions on the page view only.
   if (overlay == Overlay::None && !endOfBookMenuActive()) mappedInput.armPowerDoubleClick();
 
   // The toolbar reader menu owns all input while shown, ahead of the automatic page turn

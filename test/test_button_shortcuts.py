@@ -60,8 +60,11 @@ struct CrossPointSettings {
   enum { VIBRATION_OFF, VIBRATION_TOUCH_PAGE };
   enum SHORT_PWRBTN { IGNORE = 0, PWR_CONFIRM = 5, PWR_BOOKMARK = 7, PWR_SYNC = 8, PWR_READER_MENU = 9, PWR_BACK = 10 };
   int shortPwrBtn = IGNORE;
-  enum BUTTON_SHORTCUT { SHORTCUT_OFF, SHORTCUT_CONFIRM, SHORTCUT_BACK, SHORTCUT_CLIPPING };
-  int sideChordAction = SHORTCUT_OFF, doubleClickPwrAction = SHORTCUT_OFF;
+  enum BUTTON_SHORTCUT {
+    SHORTCUT_OFF, SHORTCUT_CONFIRM, SHORTCUT_BACK, SHORTCUT_CLIPPING, SHORTCUT_NIGHT_MODE,
+    SHORTCUT_REFRESH, SHORTCUT_BOOKMARK, SHORTCUT_READER_MENU, SHORTCUT_DICTIONARY
+  };
+  int sideChordAction = SHORTCUT_OFF, sideHoldAction = SHORTCUT_OFF, doubleClickPwrAction = SHORTCUT_OFF;
   int vibration = VIBRATION_OFF, hapticIntensity = 0;
   int homeButtonTapAction = 0, homeButtonDoubleTapAction = 0, homeButtonLongPressAction = 0;
   unsigned long getPowerButtonDuration() const { return 400; }
@@ -94,6 +97,7 @@ void frame(unsigned long advanceMs) {
 bool clipping() { return input.homeButtonAction() == HomeButtonAction::CreateClipping; }
 bool clicked(Button b) { return input.wasPressed(b) && input.wasReleased(b); }
 bool quiet(Button b) { return !input.wasPressed(b) && !input.wasReleased(b); }
+bool action(HomeButtonAction a) { return input.homeButtonAction() == a; }
 
 void sideChord() {
   // Disabled: a side press passes straight through.
@@ -260,7 +264,7 @@ void powerShortcuts() {
   // A second click seen after the window (slow frame) replays the first and
   // starts a new wait.
   powerClick(100);
-  frame(400);
+  frame(290);
   powerClick(100);
   assert(clicked(Button::Back) && !clipping());
   frame(450);
@@ -343,12 +347,106 @@ void powerShortcuts() {
   assert(clicked(Button::Confirm) && quiet(Button::Back));
   frame(500);
   assert(quiet(Button::Back) && quiet(Button::Confirm));
+
+  // Reader actions wait for the reader to arm them; the others act anywhere.
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_BOOKMARK;
+  powerClick(100);
+  assert(clicked(Button::Back));
+  powerClick(100);
+  assert(clicked(Button::Back) && !action(HomeButtonAction::Bookmark));
+  frame(500);
+  readerArmed = true;
+  frame(10);
+  powerClick(100);
+  powerClick(100);
+  assert(action(HomeButtonAction::Bookmark) && quiet(Button::Back));
+  frame(500);
+  readerArmed = false;
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_REFRESH;
+  powerClick(100);
+  powerClick(100);
+  assert(action(HomeButtonAction::Refresh) && quiet(Button::Back));
+  frame(500);
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_NIGHT_MODE;
+  powerClick(100);
+  powerClick(100);
+  assert(input.wasNightModeShortcut() && action(HomeButtonAction::Ignore) && quiet(Button::Back));
+  frame(10);
+  assert(!input.wasNightModeShortcut());
+  frame(500);
+  SETTINGS.doubleClickPwrAction = CrossPointSettings::SHORTCUT_OFF;
+  SETTINGS.shortPwrBtn = CrossPointSettings::IGNORE;
+}
+
+void pressSides(bool held) {
+  gpio.next[HalGPIO::BTN_UP] = gpio.next[HalGPIO::BTN_DOWN] = held;
+  frame(10);
+}
+
+void sideHold() {
+  // Hold set: a short chord acts on release, a long one runs the hold action.
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_CONFIRM;
+  SETTINGS.sideHoldAction = CrossPointSettings::SHORTCUT_NIGHT_MODE;
+  pressSides(true);
+  assert(quiet(Button::Confirm) && quiet(Button::Up) && quiet(Button::Down));
+  frame(200);
+  assert(quiet(Button::Confirm) && !input.wasNightModeShortcut());
+  pressSides(false);
+  assert(clicked(Button::Confirm) && quiet(Button::Up) && quiet(Button::Down) && input.getHeldTime() == 0);
+  frame(10);
+  assert(quiet(Button::Confirm));
+
+  pressSides(true);
+  frame(699);
+  assert(!input.wasNightModeShortcut());
+  frame(1);
+  assert(input.wasNightModeShortcut() && quiet(Button::Confirm));
+  frame(500);
+  assert(!input.wasNightModeShortcut() && quiet(Button::Up));
+  pressSides(false);
+  assert(quiet(Button::Confirm) && quiet(Button::Up) && quiet(Button::Down) && !input.wasNightModeShortcut());
+  frame(10);
+
+  // Releasing one key first still counts as a short chord.
+  pressSides(true);
+  gpio.next[HalGPIO::BTN_UP] = false;
+  frame(100);
+  assert(clicked(Button::Confirm) && quiet(Button::Up));
+  frame(800);
+  assert(quiet(Button::Confirm) && !input.wasNightModeShortcut() && quiet(Button::Down));
+  gpio.next[HalGPIO::BTN_DOWN] = false;
+  frame(10);
+  assert(quiet(Button::Down));
+  frame(10);
+
+  // Hold only: the short chord does nothing, the hold maps to a reader action.
+  SETTINGS.sideChordAction = CrossPointSettings::SHORTCUT_OFF;
+  SETTINGS.sideHoldAction = CrossPointSettings::SHORTCUT_READER_MENU;
+  pressSides(true);
+  pressSides(false);
+  assert(quiet(Button::Confirm) && action(HomeButtonAction::Ignore) && quiet(Button::Up));
+  frame(10);
+  pressSides(true);
+  frame(700);
+  assert(action(HomeButtonAction::ReaderMenu));
+  pressSides(false);
+  frame(10);
+  // A lone side press is still held back for the chord window.
+  gpio.next[HalGPIO::BTN_UP] = true;
+  frame(10);
+  assert(!input.wasPressed(Button::Up));
+  frame(100);
+  assert(input.wasPressed(Button::Up));
+  gpio.next[HalGPIO::BTN_UP] = false;
+  frame(10);
+  SETTINGS.sideHoldAction = CrossPointSettings::SHORTCUT_OFF;
 }
 
 int main() {
   input.update();
   sideChord();
   powerShortcuts();
+  sideHold();
 }
 """
 with tempfile.TemporaryDirectory() as directory:

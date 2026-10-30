@@ -773,6 +773,8 @@ void ClipSelectionActivity::drawWordHighlight(const int index, const int firstSe
 bool ClipSelectionActivity::renderIncremental() {
   if (actionPopup.isActive() || mappedInput.hasTouch()) return false;
   if (lastRenderedPageOffset < 0 || lastRenderedPageOffset != currentPageOffset) return false;
+  // Night Mode changed: repaint every pixel.
+  if (lastRenderedInverted != (SETTINGS.screenInverted != 0)) return false;
   const int offset = textOffset();
   const int offsetX = textXOffset();
   if (offset != lastRenderedTextOffset || offsetX != lastRenderedTextXOffset) return false;
@@ -910,6 +912,7 @@ void ClipSelectionActivity::render(RenderLock&&) {
   renderer.displayBuffer();
 
   lastRenderedPageOffset = currentPageOffset;
+  lastRenderedInverted = SETTINGS.screenInverted != 0;
   lastRenderedTextOffset = offset;
   lastRenderedTextXOffset = offsetX;
   lastRenderedRangeStart = rangeStart;

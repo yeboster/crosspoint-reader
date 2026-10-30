@@ -129,6 +129,7 @@ class ClipSelectionActivity final : public Activity {
   int lastRenderedSelected = -1;
   int lastRenderedRangeStart = -1;
   int lastRenderedPageOffset = -1;
+  bool lastRenderedInverted = false;
   int lastRenderedTextOffset = 0;
   int lastRenderedTextXOffset = 0;
 };

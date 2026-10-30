@@ -172,6 +172,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     SHORTCUT_CONFIRM = 1,
     SHORTCUT_BACK = 2,
     SHORTCUT_CLIPPING = 3,
+    SHORTCUT_NIGHT_MODE = 4,
+    SHORTCUT_REFRESH = 5,
+    SHORTCUT_BOOKMARK = 6,
+    SHORTCUT_READER_MENU = 7,
+    SHORTCUT_DICTIONARY = 8,
     BUTTON_SHORTCUT_COUNT
   };
 
@@ -293,6 +298,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t doubleClickPwrLight = 1;
   // Button boards: action for both side buttons pressed together.
   uint8_t sideChordAction = SHORTCUT_OFF;
+  // Button boards: action for holding both side buttons. While set, the
+  // sideChordAction runs on release instead of on press.
+  uint8_t sideHoldAction = SHORTCUT_OFF;
   // Button boards: action for a power double click. While set, a single click
   // waits out the double-click window.
   uint8_t doubleClickPwrAction = SHORTCUT_OFF;

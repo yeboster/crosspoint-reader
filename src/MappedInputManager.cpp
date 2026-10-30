@@ -61,7 +61,25 @@ void MappedInputManager::update(const bool deferHomeButtonAction) const {
         break;
     }
   }
-  if (frameShortcut == CrossPointSettings::SHORTCUT_CLIPPING) homeAction = HomeButtonAction::CreateClipping;
+  switch (frameShortcut) {
+    case CrossPointSettings::SHORTCUT_CLIPPING:
+      homeAction = HomeButtonAction::CreateClipping;
+      break;
+    case CrossPointSettings::SHORTCUT_REFRESH:
+      homeAction = HomeButtonAction::Refresh;
+      break;
+    case CrossPointSettings::SHORTCUT_BOOKMARK:
+      homeAction = HomeButtonAction::Bookmark;
+      break;
+    case CrossPointSettings::SHORTCUT_READER_MENU:
+      homeAction = HomeButtonAction::ReaderMenu;
+      break;
+    case CrossPointSettings::SHORTCUT_DICTIONARY:
+      homeAction = HomeButtonAction::Dictionary;
+      break;
+    default:
+      break;
+  }
   if (deferHomeButtonAction) {
     // Keep the first action observed during a synchronous transfer. Home must
     // still be visible now so the transfer can cancel and unwind promptly.
@@ -80,8 +98,15 @@ void MappedInputManager::update(const bool deferHomeButtonAction) const {
 namespace {
 // Time a side press waits for the other side key before it counts alone.
 constexpr unsigned long SIDE_CHORD_WINDOW_MS = 100;
+constexpr unsigned long SIDE_HOLD_MS = 700;
 constexpr unsigned long POWER_CLICK_MAX_HOLD_MS = 300;
-constexpr unsigned long POWER_DOUBLE_CLICK_MS = 400;
+constexpr unsigned long POWER_DOUBLE_CLICK_MS = 300;
+
+// Actions only the EPUB reader page handles.
+bool isReaderShortcut(const uint8_t action) {
+  return action == CrossPointSettings::SHORTCUT_CLIPPING || action == CrossPointSettings::SHORTCUT_BOOKMARK ||
+         action == CrossPointSettings::SHORTCUT_READER_MENU || action == CrossPointSettings::SHORTCUT_DICTIONARY;
+}
 }  // namespace
 
 void MappedInputManager::updateSideChord() const {
@@ -89,6 +114,17 @@ void MappedInputManager::updateSideChord() const {
   const bool upHeld = gpio.isPressed(HalGPIO::BTN_UP);
   const bool downHeld = gpio.isPressed(HalGPIO::BTN_DOWN);
   if (sideChord == SideChord::Held) {
+    if (!sideChordDone) {
+      // Hold action set: holding both keys runs it, an earlier release runs
+      // the chord action.
+      if (!upHeld || !downHeld) {
+        frameShortcut = SETTINGS.sideChordAction;
+        sideChordDone = true;
+      } else if (millis() - sideChordAt >= SIDE_HOLD_MS) {
+        frameShortcut = SETTINGS.sideHoldAction;
+        sideChordDone = true;
+      }
+    }
     // Hide the chord, including its release edges, until both keys are up.
     if (upHeld || downHeld || gpio.wasReleased(HalGPIO::BTN_UP) || gpio.wasReleased(HalGPIO::BTN_DOWN)) return;
     sideChord = SideChord::Idle;
@@ -109,9 +145,13 @@ void MappedInputManager::updateSideChord() const {
     return;
   }
 
-  // Idle. The setting only gates new chords, so turning it off mid-chord
+  // Idle. The settings only gate new chords, so turning them off mid-chord
   // still hides the keys until they are released.
-  if (SETTINGS.sideChordAction == CrossPointSettings::SHORTCUT_OFF || !supportsSideChord()) return;
+  if ((SETTINGS.sideChordAction == CrossPointSettings::SHORTCUT_OFF &&
+       SETTINGS.sideHoldAction == CrossPointSettings::SHORTCUT_OFF) ||
+      !supportsSideChord()) {
+    return;
+  }
   const bool upPressed = gpio.wasPressed(HalGPIO::BTN_UP);
   const bool downPressed = gpio.wasPressed(HalGPIO::BTN_DOWN);
   if (upPressed && downPressed && upHeld && downHeld) {
@@ -129,19 +169,20 @@ void MappedInputManager::updateSideChord() const {
 
 void MappedInputManager::startSideChord() const {
   sideChord = SideChord::Held;
-  frameShortcut = SETTINGS.sideChordAction;
+  sideChordAt = millis();
+  sideChordDone = SETTINGS.sideHoldAction == CrossPointSettings::SHORTCUT_OFF;
+  if (sideChordDone) frameShortcut = SETTINGS.sideChordAction;
 }
 
 bool MappedInputManager::updatePowerDoubleClick() const {
   powerReleaseHidden = false;
   powerReplayRelease = false;
-  // Clipping exists only on the EPUB page, so only the reader arms it.
+  // Reader actions exist only on the EPUB page, so only the reader arms them.
   const uint8_t action = SETTINGS.doubleClickPwrAction;
-  const bool armed = action == CrossPointSettings::SHORTCUT_CLIPPING ? powerDoubleClickArmed
-                                                                     : action != CrossPointSettings::SHORTCUT_OFF;
+  const bool armed = isReaderShortcut(action) ? powerDoubleClickArmed : action != CrossPointSettings::SHORTCUT_OFF;
   powerDoubleClickArmed = false;
   if (!armed || gpio.hasTouch()) {
-    // Off, or Clipping away from the reader page: drop any held-back click.
+    // Off, or a reader action away from the reader page: drop any held-back click.
     powerClickAt = 0;
     return false;
   }
@@ -187,6 +228,10 @@ bool MappedInputManager::readButton(const uint8_t index, bool (HalGPIO::*fn)(uin
     if (powerReleaseHidden) return false;
   }
   return (gpio.*fn)(index);
+}
+
+bool MappedInputManager::wasNightModeShortcut() const {
+  return frameShortcut == CrossPointSettings::SHORTCUT_NIGHT_MODE;
 }
 
 bool MappedInputManager::wasPowerClickAction(const uint8_t action) const {
