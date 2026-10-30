@@ -9,6 +9,7 @@
 #include <HalDisplay.h>
 #include <HalFrontlight.h>
 #include <HalGPIO.h>
+#include <HalMemory.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
@@ -71,7 +72,10 @@ bool xteinkClassPanel() {
 constexpr int PAGE_TURN_RATES[] = {1, 1, 3, 6, 12};
 constexpr size_t initialBookmarkCacheCapacity = 16;
 constexpr float bookmarkProgressEpsilon = 0.0001f;
-constexpr int CLIP_SELECTION_PAGE_WINDOW = 3;
+// Pages past the base window stop loading below this much internal RAM, so
+// task stacks, DMA buffers and BLE keep their headroom.
+constexpr size_t CLIP_EXTRA_PAGE_MIN_INTERNAL_FREE = 64U * 1024U;
+constexpr size_t CLIP_EXTRA_PAGE_MIN_INTERNAL_BLOCK = 32U * 1024U;
 
 // Word i's font: headings and CSS font-size runs can differ from the section font.
 int clippingWordFont(const GfxRenderer& renderer, const int fontId, const TextBlock& block, const uint16_t i) {
@@ -420,9 +424,18 @@ void EpubReaderActivity::startClipSelection(const int initialX, const int initia
   const uint16_t pageCount = section->pageCount;
   const uint16_t spineIndex = static_cast<uint16_t>(currentSpineIndex);
   std::vector<std::unique_ptr<Page>> pages;
-  pages.reserve(CLIP_SELECTION_PAGE_WINDOW);
-  for (int pageOffset = 0; pageOffset < CLIP_SELECTION_PAGE_WINDOW && pageNumber + pageOffset < pageCount;
-       ++pageOffset) {
+  // Dictionary lookups only need the nearby pages.
+  const int pageWindow =
+      mode == ClipSelectionActivity::Mode::Clip ? CLIP_SELECTION_MAX_PAGES : CLIP_SELECTION_BASE_PAGES;
+  pages.reserve(pageWindow);
+  for (int pageOffset = 0; pageOffset < pageWindow && pageNumber + pageOffset < pageCount; ++pageOffset) {
+    if (pageOffset >= CLIP_SELECTION_BASE_PAGES) {
+      const auto heap = HalMemory::getInternalHeap();
+      if (heap.freeBytes < CLIP_EXTRA_PAGE_MIN_INTERNAL_FREE ||
+          heap.largestBlockBytes < CLIP_EXTRA_PAGE_MIN_INTERNAL_BLOCK) {
+        break;
+      }
+    }
     auto page = section->loadPage(pageNumber + pageOffset);
     if (!page) break;
     if (pageOffset == 0 && initialX >= 0 && CLIPPINGS.hasClippings()) {

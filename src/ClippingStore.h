@@ -14,7 +14,20 @@ inline constexpr size_t CLIPPING_CHAPTER_TITLE_MAX = 48;
 // Clipping text lives on the SD card rather than in every in-memory clipping
 // record. Match the reader's bounded selection-text budget so previews retain
 // a complete multi-paragraph selection without growing the saved-item index.
+// PSRAM boards select longer clippings. A store holding a clipping above 4 KiB
+// does not load on a 4 KiB build.
+inline constexpr int CLIP_SELECTION_BASE_PAGES = 3;
+#ifdef BOARD_HAS_PSRAM
+inline constexpr size_t CLIPPING_TEXT_MAX = 16U * 1024U;
+inline constexpr int CLIP_SELECTION_MAX_PAGES = 8;
+inline constexpr size_t CLIP_SELECTION_MAX_WORDS = 2400;
+inline constexpr size_t CLIPPING_EXPORT_MAX = CLIPPING_TEXT_MAX;
+#else
 inline constexpr size_t CLIPPING_TEXT_MAX = 4U * 1024U;
+inline constexpr int CLIP_SELECTION_MAX_PAGES = CLIP_SELECTION_BASE_PAGES;
+inline constexpr size_t CLIP_SELECTION_MAX_WORDS = 240;
+inline constexpr size_t CLIPPING_EXPORT_MAX = 2000;
+#endif
 #if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
 inline constexpr uint16_t CLIPPING_MAX_PER_BOOK = 1024;
 #else

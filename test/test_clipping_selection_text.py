@@ -193,7 +193,6 @@ bool selectionLowMemory(const int first, const int last) {
 struct ClipSelectionActivity {
 """ + word_box + r"""
   std::unique_ptr<WordBox[]> words = makeUniqueNoThrow<WordBox[]>(240);
-  static constexpr size_t MAX_SELECTABLE_WORDS = 240;
   enum class Mode { Clip, Lookup, DefinitionLookup };
   Mode mode = Mode::Clip;
   Renderer renderer;

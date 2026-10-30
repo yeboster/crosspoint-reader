@@ -21,7 +21,7 @@ constexpr uint8_t LAYOUT_VERSION = 3;
 constexpr uint8_t VERSION = 4;
 constexpr char CLIPPINGS_DIR[] = "/.crosspoint/clippings";
 constexpr size_t TEXT_COPY_BUFFER_SIZE = 128;
-constexpr size_t HEADER_STRING_MAX = CLIPPING_TEXT_MAX;
+constexpr size_t HEADER_STRING_MAX = 4U * 1024U;
 
 bool truncateDeletionTail(HalFile& journal) {
   const size_t size = journal.size();

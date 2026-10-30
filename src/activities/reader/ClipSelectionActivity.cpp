@@ -117,7 +117,7 @@ void ClipSelectionActivity::onEnter() {
 
 bool ClipSelectionActivity::extractWords() {
   wordCount = 0;
-  size_t capacity = MAX_SELECTABLE_WORDS;
+  size_t capacity = CLIP_SELECTION_MAX_WORDS;
   if (mode == Mode::DefinitionLookup) {
     capacity = 0;
     for (size_t i = 0; i < pageCount(); ++i) {

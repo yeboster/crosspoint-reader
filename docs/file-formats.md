@@ -693,7 +693,9 @@ Stable IDs are saved before upload. A sibling `.deleted` file stores fixed
 local record is removed and retried on the next enabled manual sync. A `.bak`
 file is recovered if power interrupted replacement of the main store.
 
-Clipping header strings are limited to 4 KiB on both reads and writes. A failed
+Clipping header strings are limited to 4 KiB on both reads and writes. Clipping
+text is limited to `CLIPPING_TEXT_MAX`: 4 KiB on C3 builds, 16 KiB on PSRAM
+builds. A store holding longer text fails to load on a 4 KiB build. A failed
 load leaves no usable index and disables writes until a successful load. The
 index is allocated with checked, bounded growth and released on unload.
 

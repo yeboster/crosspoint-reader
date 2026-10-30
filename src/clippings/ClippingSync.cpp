@@ -14,9 +14,10 @@
 #include "ClippingStore.h"
 
 namespace {
-// One item per response: 4 KiB text may occupy 24 KiB when JSON-escaped.
-// Reuse one buffer for requests and responses; C3 borrows it from the framebuffer.
-constexpr size_t BUFFER_SIZE = 32 * 1024;
+// One item per response: its text may grow 6x when JSON-escaped (32 KiB for
+// 4 KiB text). Reuse one buffer for requests and responses; C3 borrows it from
+// the framebuffer.
+constexpr size_t BUFFER_SIZE = 6 * CLIPPING_TEXT_MAX + 8 * 1024;
 
 bool request(freeink::SecureHttpClient& http, const std::string& url, char* buffer, JsonDocument& doc,
              const bool upload = false) {
